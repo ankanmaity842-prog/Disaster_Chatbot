@@ -2,17 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DisastraBot 🤖 - Your Friend In Disaster Situation &#129309</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DisastraBot 🤖 - Your Friend In Disaster Situation 🤝</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <div class="chat-wrapper">
-    <div class="chat-header">DisastraBot 🤖 - Your Friend In Disaster Situation &#129309 </div>
+    <div class="chat-header">DisastraBot 🤖 - Your Friend In Disaster Situation 🤝</div>
 
-    <div class="chat-box" id="chatbox"></div>
+    <div class="chat-box" id="chatbox">
+      <div class="message bot">
+        <strong>DisastraBot:</strong>
+        <p>Hello! I'm DisastraBot, your disaster assistance companion. I'm here to help you with emergency information, safety tips, and disaster preparedness. How can I assist you today?</p>
+      </div>
+    </div>
 
     <div class="chat-input">
-      <select id="language">
+      <label for="language" class="sr-only">Select Language</label>
+      <select id="language" title="Select your preferred language" aria-label="Language selection">
         <option value="en">English</option>
         <option value="hi">Hindi</option>
         <option value="bn">Bengali</option>
@@ -27,50 +34,87 @@
         <option value="as">Assamese</option>
         <option value="ur">Urdu</option>
       </select>
-      <input type="text" id="userInput" placeholder="Ask your question..." />
-      <button onclick="sendMessage()">Send</button>
+      <label for="userInput" class="sr-only">Type your message</label>
+      <input type="text" id="userInput" placeholder="Ask your question..." aria-label="Type your message here" />
+      <button id="sendBtn" onclick="sendMessage()" aria-label="Send message">Send</button>
     </div>
   </div>
 
   <script>
     let isSending = false;
+
+    // Add Enter key listener to input field
+    document.getElementById("userInput").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
     async function sendMessage() {
       if (isSending) return;
-        isSending = true;
-        isSending = false;
-
-      const input = document.getElementById("userInput").value;
+      
+      const input = document.getElementById("userInput");
       const lang = document.getElementById("language").value;
-      document.getElementById("userInput").addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-           event.preventDefault(); 
-           sendMessage();          
-  }
-});
-      if (!input.trim()) return;
+      const sendBtn = document.getElementById("sendBtn");
+      const message = input.value.trim();
+      
+      if (!message) return;
+
+      // Set sending state
+      isSending = true;
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<span class="loading"></span>';
 
       const chatbox = document.getElementById("chatbox");
-      chatbox.innerHTML += `<div class="message student"><strong>You : </strong>${input}</div>`;
-      const res = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input, language: lang })
-      });
-
-      const data = await res.json();
-      const lines = data.response.split("\n").filter(line => line.trim());
       
-
-
-
-    
-      let botResponse = `<div class="message bot"><strong>DisastraBot:</strong><ul>`;
-      for (const line of lines) {
-        botResponse += `<li>${line}</li>`;
-      }
-      botResponse += `</ul></div>`;
-      chatbox.innerHTML += botResponse;
+      // Add user message
+      chatbox.innerHTML += `<div class="message student"><strong>You:</strong> ${message}</div>`;
+      input.value = '';
       chatbox.scrollTop = chatbox.scrollHeight;
+
+      try {
+        // Simulate API call (replace with your actual endpoint)
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: message, language: lang })
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        // Process response
+        const lines = data.response.split("\n").filter(line => line.trim());
+        
+        let botResponse = `<div class="message bot"><strong>DisastraBot:</strong>`;
+        
+        if (lines.length > 1) {
+          botResponse += `<ul>`;
+          for (const line of lines) {
+            botResponse += `<li>${line}</li>`;
+          }
+          botResponse += `</ul>`;
+        } else {
+          botResponse += `<p>${lines[0] || 'I apologize, but I couldn\'t process your request at the moment.'}</p>`;
+        }
+        
+        botResponse += `</div>`;
+        chatbox.innerHTML += botResponse;
+        
+      } catch (error) {
+        console.error('Error:', error);
+        chatbox.innerHTML += `<div class="message bot"><strong>DisastraBot:</strong><p>I'm sorry, I'm having trouble connecting right now. Please try again in a moment.</p></div>`;
+      } finally {
+        // Reset sending state
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = 'Send';
+        chatbox.scrollTop = chatbox.scrollHeight;
+      }
     }
   </script>
 </body>
