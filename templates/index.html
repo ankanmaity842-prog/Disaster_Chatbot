@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DisastraBot 🤖 - Your Friend In Disaster Situation &#129309</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="chat-wrapper">
+    <div class="chat-header">DisastraBot 🤖 - Your Friend In Disaster Situation &#129309 </div>
+
+    <div class="chat-box" id="chatbox"></div>
+
+    <div class="chat-input">
+      <select id="language">
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="bn">Bengali</option>
+        <option value="ta">Tamil</option>
+        <option value="te">Telugu</option>
+        <option value="mr">Marathi</option>
+        <option value="gu">Gujarati</option>
+        <option value="kn">Kannada</option>
+        <option value="ml">Malayalam</option>
+        <option value="or">Odia</option>
+        <option value="pa">Punjabi</option>
+        <option value="as">Assamese</option>
+        <option value="ur">Urdu</option>
+      </select>
+      <input type="text" id="userInput" placeholder="Ask your question..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let isSending = false;
+    async function sendMessage() {
+      if (isSending) return;
+        isSending = true;
+        isSending = false;
+
+      const input = document.getElementById("userInput").value;
+      const lang = document.getElementById("language").value;
+      document.getElementById("userInput").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+           event.preventDefault(); 
+           sendMessage();          
+  }
+});
+      if (!input.trim()) return;
+
+      const chatbox = document.getElementById("chatbox");
+      chatbox.innerHTML += `<div class="message student">${input}</div>`;
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input, language: lang })
+      });
+
+      const data = await res.json();
+      const lines = data.response.split("\n").filter(line => line.trim());
+      
+
+
+
+    
+      let botResponse = `<div class="message bot"><strong>DisastraBot:</strong><ul>`;
+      for (const line of lines) {
+        botResponse += `<li>${line}</li>`;
+      }
+      botResponse += `</ul></div>`;
+      chatbox.innerHTML += botResponse;
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
