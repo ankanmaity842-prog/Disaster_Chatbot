@@ -32,8 +32,8 @@ body {
 .chat-box {
   flex: 1;
   overflow-y: auto;
-  padding: 15px;
-  background:rgb(238, 250, 254);
+  padding: 20px 15px; 
+  background: rgb(238, 250, 254);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -65,14 +65,19 @@ body {
 }
 
 .message {
-  padding: 10px 15px;
+  margin-bottom: 12px; 
+  padding: 12px 18px;
   border-radius: 12px;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
   word-wrap: break-word;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-
+.message:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+  transform: scale(1.01);
+  transition: all 0.2s ease-in-out;
+}
 .student {
   background-color: #ffffff;
   color: #333;
