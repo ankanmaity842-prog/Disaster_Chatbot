@@ -4,19 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DisastraBot 🤖 - Your Friend In Disaster Situation 🤝</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <div class="chat-wrapper">
-    <div class="chat-header">DisastraBot 🤖 - Your Friend In Disaster Situation 🤝</div>
-
+<div id="historyPanel" class="history-panel hidden">
+  <div id="historyContent"></div>
+    </div>
+    <div class="chat-header">
+      <span>DisastraBot 🤖 - Your Friend In Disaster Situation 🤝</span>
+      <div class="chat-header-tools">
+        <button class="header-btn" onclick="refreshChat()" title="Refresh chat">
+          <i class="fas fa-rotate-right"></i>
+        </button>
+        <button class="header-btn" onclick="toggleMenu()" title="More options">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+      </div>
+    
+    </div>
     <div class="chat-box" id="chatbox">
+      <div class="chat-tools-bottom"></div>
       <div class="message bot">
-        <strong>DisastraBot:</strong>
         <p>Hello! I'm DisastraBot, your disaster assistance companion. I'm here to help you with emergency information, safety tips, and disaster preparedness. How can I assist you today?</p>
       </div>
     </div>
-
     <div class="chat-input">
       <label for="language" class="sr-only">Select Language</label>
       <select id="language" title="Select your preferred language" aria-label="Language selection">
@@ -35,87 +48,143 @@
         <option value="ur">Urdu</option>
       </select>
       <label for="userInput" class="sr-only">Type your message</label>
-      <input type="text" id="userInput" placeholder="Ask your question..." aria-label="Type your message here" />
-      <button id="sendBtn" onclick="sendMessage()" aria-label="Send message">Send</button>
+      <input type="text" id="userInput" placeholder="Ask your question..." rows="1" aria-label="Type your message here" />
+      <button id="sendBtn" title="Send your message">
+        <svg xmlns="http://www.w3.org/2000/svg" class="send-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+        </svg>
+      </button>
     </div>
   </div>
+<script>
+  let isSending = false;
+  let isFollowUp = false;
+  let conversationHistory = [];
+  let pendingFollowUp = null;
 
-  <script>
-    let isSending = false;
+  
+  document.getElementById("sendBtn").addEventListener("click", () => sendMessage());
+  document.getElementById("userInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
 
-    // Add Enter key listener to input field
-    document.getElementById("userInput").addEventListener("keydown", function(event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        sendMessage();
-      }
+  async function sendMessage(messageOverride = null) {
+    if (isSending) return;
+
+    const input = document.getElementById("userInput");
+    const chatbox = document.getElementById("chatbox");
+    const langEl = document.getElementById("language");
+    const lang = langEl ? langEl.value : "en";
+    const message = messageOverride || input.value.trim();
+
+    if (!message) return;
+
+    const studentHTML = isFollowUp
+      ? `<div class="message student follow-up"><span class="student-text">${message}</span></div>`
+      : `<div class="message student"><span class="student-text">${message}</span></div>`;
+    chatbox.insertAdjacentHTML("beforeend", studentHTML);
+    isFollowUp = false;
+
+    conversationHistory.push({
+      role: "student",
+      text: message,
+      time: new Date().toLocaleTimeString()
     });
 
-    async function sendMessage() {
-      if (isSending) return;
-      
-      const input = document.getElementById("userInput");
-      const lang = document.getElementById("language").value;
-      const sendBtn = document.getElementById("sendBtn");
-      const message = input.value.trim();
-      
-      if (!message) return;
+    input.value = '';
+    chatbox.scrollTop = chatbox.scrollHeight;
 
-      // Set sending state
+    try {
       isSending = true;
-      sendBtn.disabled = true;
-      sendBtn.innerHTML = '<span class="loading"></span>';
+      document.getElementById("sendBtn").disabled = true;
 
-      const chatbox = document.getElementById("chatbox");
-      
-      // Add user message
-      chatbox.innerHTML += `<div class="message student"><strong>You:</strong> ${message}</div>`;
-      input.value = '';
-      chatbox.scrollTop = chatbox.scrollHeight;
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message, language: lang })
+      });
 
-      try {
-        // Simulate API call (replace with your actual endpoint)
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: message, language: lang })
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+      if (!res.ok) {
+        if (!chatbox.innerHTML.includes("⚠️ I'm having trouble connecting")) {
+          chatbox.insertAdjacentHTML("beforeend", `<div class="message bot"><p>⚠️ I'm having trouble connecting. Please try again later.</p></div>`);
         }
-
-        const data = await res.json();
-        
-        // Process response
-        const lines = data.response.split("\n").filter(line => line.trim());
-        
-        let botResponse = `<div class="message bot"><strong>DisastraBot:</strong>`;
-        
-        if (lines.length > 1) {
-          botResponse += `<ul>`;
-          for (const line of lines) {
-            botResponse += `<li>${line}</li>`;
-          }
-          botResponse += `</ul>`;
-        } else {
-          botResponse += `<p>${lines[0] || 'I apologize, but I couldn\'t process your request at the moment.'}</p>`;
-        }
-        
-        botResponse += `</div>`;
-        chatbox.innerHTML += botResponse;
-        
-      } catch (error) {
-        console.error('Error:', error);
-        chatbox.innerHTML += `<div class="message bot"><strong>DisastraBot:</strong><p>I'm sorry, I'm having trouble connecting right now. Please try again in a moment.</p></div>`;
-      } finally {
-        // Reset sending state
-        isSending = false;
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = 'Send';
-        chatbox.scrollTop = chatbox.scrollHeight;
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
+
+      const data = await res.json();
+      console.log("Backend response:", data); 
+
+      if (data.response) {
+        const lines = data.response.split("\n").filter(line => line.trim());
+        let botHTML = `<div class="message bot">`;
+        botHTML += lines.length > 1
+          ? `<ul>${lines.map(line => `<li>${line}</li>`).join("")}</ul>`
+          : `<p>${lines[0]}</p>`;
+        botHTML += `</div>`;
+        chatbox.insertAdjacentHTML("beforeend", botHTML);
+
+        conversationHistory.push({
+          role: "bot",
+          text: data.response,
+          time: new Date().toLocaleTimeString()
+        });
+      }
+
+      if (data.followup) {
+        renderFollowUp(data.followup);
+        pendingFollowUp = true;
+      }
+
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      isSending = false;
+      document.getElementById("sendBtn").disabled = false;
+      chatbox.scrollTop = chatbox.scrollHeight;
     }
-  </script>
+  }
+
+  function renderFollowUp(text) {
+    const chatbox = document.getElementById("chatbox");
+    const followUpHTML = `
+      <div class="message bot follow-up">
+        <p><b>💡</b> <span class="clickable" onclick="handleFollowUp(this.innerText)">${text}</span></p>
+      </div>
+    `;
+    chatbox.insertAdjacentHTML("beforeend", followUpHTML);
+  }
+
+  function handleFollowUp(text) {
+    isFollowUp = true;
+    sendMessage(text);
+  }
+
+  function refreshChat() {
+    const chatbox = document.getElementById("chatbox");
+    chatbox.innerHTML = `
+      <div class="message bot">
+        <p>Hello! I'm DisastraBot, your disaster assistance companion. I'm here to help you with emergency information, safety tips, and disaster preparedness. How can I assist you today?</p>
+      </div>
+    `;
+    document.getElementById("userInput").value = '';
+    conversationHistory = [];
+    pendingFollowUp = null;
+  }
+
+  function toggleMenu() {
+    document.getElementById("toggleMenu").classList.toggle("hidden");
+  }
+
+  document.getElementById("userInput").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      sendMessage();
+    }
+  });
+</script>
+
 </body>
 </html>
