@@ -82,9 +82,14 @@ body {
   white-space: pre-wrap;
   position: relative;
 }
+.message.student.follow-up {
+  background-color: #e6f7ff;
+  border-left: none;
+  max-width: 80%;
+}
 
 .message.bot.follow-up {
-  background: #f6f6f6;
+  background: rgb(246, 254, 255);
   color: #333;
   font-style: italic;
   padding: 10px 14px;
@@ -291,7 +296,6 @@ button:disabled {
   100% { transform: rotate(360deg); }
 }
 
-/* Scrollbar styling */
 .chat-box::-webkit-scrollbar {
   width: 6px;
 }

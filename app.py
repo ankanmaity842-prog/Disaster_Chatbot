@@ -1,20 +1,25 @@
 from flask import Flask, request, jsonify, render_template
 from modules.query_handler import handle_query
 import json, os, random
+from functools import lru_cache
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-
-
 dq_path = os.path.join(app.static_folder, 'disaster_queries.json')
 with open(dq_path, 'r', encoding='utf-8') as f:
     dq_data = json.load(f)
 
 disaster_queries = dq_data.get("disaster_queries", {})
-
-
+keyword_index = {}
+for dtype, data in disaster_queries.items():
+    followups = data.get("followups", {}).get("keyword", [])
+    for block in followups:
+        for kw in block.get("keywords", []):
+            keyword_index.setdefault(kw.lower(), []).extend(block.get("messages", []))
 intro_phrases = [
     "Great! Let’s take the next step together.",
-    "Awesome, you’re doing really well.",
+    "I’m here with you. Want to keep going?",
+    "Let’s make this simple and clear together.",
+    "Here’s something that might really help.",
     "Want to explore this a bit more?",
     "Can I show you something helpful?",
     "Let me walk you through this.",
@@ -22,13 +27,18 @@ intro_phrases = [
     "Let’s make this easier together.",
     "I’ve got something useful for you.",
     "Shall we dive into the next part?",
-    "Let’s stay safe and smart. Want to hear more?"
+    "Let’s stay safe and smart. Want to hear more?",
+    "I’ve got your back. Want to take a closer look?",
+    "This might be useful — shall we explore it?",
+    "Let’s walk through it step by step.",
+    "Here’s something that could make things clearer.",
+    "I’ve got a tip that might make this easier.",
+    "You're doing great — ready for the next tip?",
+    "Let’s take this one step further."
 ]
 
-# Disaster type detection
 def detect_disaster_type(message: str):
     msg = message.lower()
-
     if any(word in msg for word in ["earthquake", "भूकंप", "ভূমিকম্প", "நிலநடுக்கம்", "భూకంపం"]):
         return "earthquake"
     if any(word in msg for word in ["flood", "बाढ़", "বন্যা", "வெள்ளம்", "వరద"]):
@@ -37,8 +47,12 @@ def detect_disaster_type(message: str):
         return "fire"
     if any(word in msg for word in ["cyclone", "चक्रवात", "ঘূর্ণিঝড়", "சுழற்சி புயல்", "చక్రవాతం"]):
         return "cyclone"
-
     return None
+
+@lru_cache(maxsize=500)
+def cached_query(message, lang):
+    raw_response = handle_query(message, lang)
+    return raw_response.get("text") if isinstance(raw_response, dict) else str(raw_response)
 
 @app.route("/")
 def home():
@@ -52,44 +66,27 @@ def chat():
     if not user_input:
         return jsonify({"response": "Please enter a message.", "followup": None})
 
-    
-    raw_response = handle_query(user_input, user_lang)
-    response = raw_response.get("text") if isinstance(raw_response, dict) else str(raw_response)
-
-    
+    response = cached_query(user_input, user_lang)
     disaster_type = detect_disaster_type(user_input)
     followup = None
     matched_messages = []
 
-    
-    if disaster_type and disaster_queries:
-        disaster_data = disaster_queries.get(disaster_type, {})
+    for word in user_input.lower().split():
+        if word in keyword_index:
+            matched_messages.extend(keyword_index[word])
 
-    
-        followups_by_lang = disaster_data.get("followups", {})
-        keyword_blocks = followups_by_lang.get("keyword", [])
-
-        
-        for block in keyword_blocks:
-            for kw in block.get("keywords", []):
-                if kw.lower() in user_input.lower():
-                    matched_messages.extend(block.get("messages", []))
-
-        if not matched_messages and keyword_blocks:
-            fallback_block = random.choice(keyword_blocks)
+    if not matched_messages and disaster_type:
+        fallback_blocks = disaster_queries.get(disaster_type, {}).get("followups", {}).get("keyword", [])
+        if fallback_blocks:
+            fallback_block = random.choice(fallback_blocks)
             matched_messages.extend(random.sample(
                 fallback_block.get("messages", []),
                 min(3, len(fallback_block.get("messages", [])))
             ))
 
-        if matched_messages:
-            intro = random.choice(intro_phrases)
-            followup = f"{intro} {random.choice(matched_messages)}"
-
-    # Debug logs
-    print("User input:", user_input)
-    print("Detected disaster:", disaster_type)
-    print("Matched followups:", matched_messages if matched_messages else "None")
+    if matched_messages:
+        intro = random.choice(intro_phrases)
+        followup = f"{intro} {random.choice(matched_messages)}"
 
     return jsonify({
         "response": response,

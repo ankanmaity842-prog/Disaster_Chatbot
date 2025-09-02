@@ -22,7 +22,7 @@
           <i class="fas fa-ellipsis-v"></i>
         </button>
       </div>
-    
+     
     </div>
     <div class="chat-box" id="chatbox">
       <div class="chat-tools-bottom"></div>
@@ -57,36 +57,38 @@
     </div>
   </div>
 <script>
-  let isSending = false;
-  let isFollowUp = false;
-  let conversationHistory = [];
-  let pendingFollowUp = null;
+let isSending = false;
+let isFollowUp = false;
+let conversationHistory = [];
+let pendingFollowUp = null;
+let lastFollowUpText = null;
 
-  
-  document.getElementById("sendBtn").addEventListener("click", () => sendMessage());
-  document.getElementById("userInput").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
+document.getElementById("sendBtn").addEventListener("click", () => sendMessage());
+document.getElementById("userInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendMessage();
+  }
+});
 
-  async function sendMessage(messageOverride = null) {
-    if (isSending) return;
+async function sendMessage(messageOverride = null) {
+  if (isSending) return;
 
-    const input = document.getElementById("userInput");
-    const chatbox = document.getElementById("chatbox");
-    const langEl = document.getElementById("language");
-    const lang = langEl ? langEl.value : "en";
-    const message = messageOverride || input.value.trim();
+  const input = document.getElementById("userInput");
+  const chatbox = document.getElementById("chatbox");
+  const langEl = document.getElementById("language");
+  const lang = langEl ? langEl.value : "en";
+  const message = messageOverride || input.value.trim();
+  const normalized = message.toLowerCase();
 
-    if (!message) return;
+  if (!message) return;
 
-    const studentHTML = isFollowUp
-      ? `<div class="message student follow-up"><span class="student-text">${message}</span></div>`
-      : `<div class="message student"><span class="student-text">${message}</span></div>`;
+  const affirmatives = ["yes", "okay", "sure", "ok", "yep", "yeah"];
+  const negatives = ["no", "not now", "maybe later", "nah", "nope", "cancel"];
+
+  if (affirmatives.includes(normalized)) {
+    const studentHTML = `<div class="message student"><span class="student-text">${message}</span></div>`;
     chatbox.insertAdjacentHTML("beforeend", studentHTML);
-    isFollowUp = false;
 
     conversationHistory.push({
       role: "student",
@@ -97,72 +99,194 @@
     input.value = '';
     chatbox.scrollTop = chatbox.scrollHeight;
 
-    try {
-      isSending = true;
-      document.getElementById("sendBtn").disabled = true;
-
-      const res = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: message, language: lang })
-      });
-
-      if (!res.ok) {
-        if (!chatbox.innerHTML.includes("⚠️ I'm having trouble connecting")) {
-          chatbox.insertAdjacentHTML("beforeend", `<div class="message bot"><p>⚠️ I'm having trouble connecting. Please try again later.</p></div>`);
-        }
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-      console.log("Backend response:", data); 
-
-      if (data.response) {
-        const lines = data.response.split("\n").filter(line => line.trim());
-        let botHTML = `<div class="message bot">`;
-        botHTML += lines.length > 1
-          ? `<ul>${lines.map(line => `<li>${line}</li>`).join("")}</ul>`
-          : `<p>${lines[0]}</p>`;
-        botHTML += `</div>`;
-        chatbox.insertAdjacentHTML("beforeend", botHTML);
-
-        conversationHistory.push({
-          role: "bot",
-          text: data.response,
-          time: new Date().toLocaleTimeString()
-        });
-      }
-
-      if (data.followup) {
-        renderFollowUp(data.followup);
-        pendingFollowUp = true;
-      }
-
-    } catch (error) {
-      console.error("Fetch error:", error);
-    } finally {
-      isSending = false;
-      document.getElementById("sendBtn").disabled = false;
-      chatbox.scrollTop = chatbox.scrollHeight;
+    if (lastFollowUpText) {
+      isFollowUp = true;
+      setTimeout(() => handleFollowUp(lastFollowUpText), 100);
+    } else {
+      const botHTML = `
+        <div class="message bot">
+          <p>Thanks for confirming. Let me know if you need help with anything else.</p>
+        </div>
+      `;
+      chatbox.insertAdjacentHTML("beforeend", botHTML);
     }
+
+    return;
   }
 
-  function renderFollowUp(text) {
-    const chatbox = document.getElementById("chatbox");
-    const followUpHTML = `
-      <div class="message bot follow-up">
-        <p><b>💡</b> <span class="clickable" onclick="handleFollowUp(this.innerText)">${text}</span></p>
+  if (negatives.includes(normalized)) {
+    const studentHTML = `<div class="message student"><span class="student-text">${message}</span></div>`;
+    chatbox.insertAdjacentHTML("beforeend", studentHTML);
+
+    const botHTML = `
+      <div class="message bot">
+        <p>Thanks for your response. Feel free to ask me anything else.</p>
       </div>
     `;
-    chatbox.insertAdjacentHTML("beforeend", followUpHTML);
+    chatbox.insertAdjacentHTML("beforeend", botHTML);
+
+    input.value = '';
+    chatbox.scrollTop = chatbox.scrollHeight;
+    return;
   }
 
-  function handleFollowUp(text) {
-    isFollowUp = true;
-    sendMessage(text);
+  const studentHTML = isFollowUp
+    ? `<div class="message student follow-up"><span class="student-text">${message}</span></div>`
+    : `<div class="message student"><span class="student-text">${message}</span></div>`;
+  chatbox.insertAdjacentHTML("beforeend", studentHTML);
+  isFollowUp = false;
+
+  conversationHistory.push({
+    role: "student",
+    text: message,
+    time: new Date().toLocaleTimeString()
+  });
+
+  input.value = '';
+  chatbox.scrollTop = chatbox.scrollHeight;
+
+  try {
+    isSending = true;
+    document.getElementById("sendBtn").disabled = true;
+
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: message, language: lang })
+    });
+
+    if (!res.ok) {
+      if (!chatbox.innerHTML.includes("⚠️ I'm having trouble connecting")) {
+        chatbox.insertAdjacentHTML("beforeend", `<div class="message bot"><p>⚠️ I'm having trouble connecting. Please try again later.</p></div>`);
+      }
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log("Backend response:", data);
+
+    if (data.response) {
+      const lines = data.response.split("\n").filter(line => line.trim());
+      let botHTML = `<div class="message bot">`;
+      botHTML += lines.length > 1
+        ? `<ul>${lines.map(line => `<li>${line}</li>`).join("")}</ul>`
+        : `<p>${lines[0]}</p>`;
+      botHTML += `</div>`;
+      chatbox.insertAdjacentHTML("beforeend", botHTML);
+
+      conversationHistory.push({
+        role: "bot",
+        text: data.response,
+        time: new Date().toLocaleTimeString()
+      });
+    }
+
+    if (data.followup) {
+      renderFollowUp(data.followup);
+      pendingFollowUp = true;
+      lastFollowUpText = data.followup;
+    }
+
+  } catch (error) {
+    console.error("Fetch error:", error);
+  } finally {
+    isSending = false;
+    document.getElementById("sendBtn").disabled = false;
+    chatbox.scrollTop = chatbox.scrollHeight;
+  }
+}
+
+function renderFollowUp(text) {
+  const chatbox = document.getElementById("chatbox");
+  const followUpHTML = `
+    <div class="message bot follow-up">
+      <p><b>💡</b> <span class="clickable" onclick="handleFollowUp(this.innerText)">${text}</span></p>
+    </div>
+  `;
+  chatbox.insertAdjacentHTML("beforeend", followUpHTML);
+  lastFollowUpText = text;
+}
+
+function handleFollowUp(text) {
+  isFollowUp = true;
+
+  const introPhrases = [
+    "Great! Let’s take the next step together.",
+    "I’m here with you. Want to keep going?",
+    "Let’s make this simple and clear together.",
+    "Here’s something that might really help.",
+    "Want to explore this a bit more?",
+    "Can I show you something helpful?",
+    "Let me walk you through this.",
+    "You’re on the right track. Want to go deeper?",
+    "Let’s make this easier together.",
+    "I’ve got something useful for you.",
+    "Shall we dive into the next part?",
+    "Let’s stay safe and smart. Want to hear more?",
+    "I’ve got your back. Want to take a closer look?",
+    "This might be useful — shall we explore it?",
+    "Let’s walk through it step by step.",
+    "Here’s something that could make things clearer.",
+    "I’ve got a tip that might make this easier.",
+    "You're doing great — ready for the next tip?",
+    "Let’s take this one step further."
+  ];
+
+  let cleaned = text;
+  introPhrases.forEach(phrase => {
+    const regex = new RegExp("^" + phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    cleaned = cleaned.replace(regex, "").trim();
+  });
+
+  const offerPatterns = [
+    /\b(Can|May|Shall|Should|Would)\s+I\s+(share|give|show|help|offer|send|explain)\s+you\b/i,
+    /\bLet me\b/i,
+    /\bI have\b.*\byou\b/i
+  ];
+
+  const isOffer = offerPatterns.some(pattern => pattern.test(cleaned));
+
+  if (isOffer) {
+    cleaned = cleaned
+      .replace(/\bCan I\b/gi, "Can you")
+      .replace(/\bMay I\b/gi, "May you")
+      .replace(/\bShall I\b/gi, "Shall you")
+      .replace(/\bShould I\b/gi, "Should you")
+      .replace(/\bWould I\b/gi, "Would you")
+      .replace(/\bI\b/g, "you")
+      .replace(/\bme\b/g, "you")
+      .replace(/\bmy\b/g, "your")
+      .replace(/\bMy\b/g, "Your")
+      .replace(/\byou\b/g, "me")
+      .replace(/\byour\b/g, "my")
+      .replace(/\bYou\b/g, "me")
+      .replace(/\bYour\b/g, "My")
+      .replace(/\byourself\b/g, "myself")
+      .replace(/\bmyself\b/g, "yourself");
+  } else {
+    cleaned = cleaned
+      .replace(/\bCan you\b/gi, "Can I")
+      .replace(/\bMay you\b/gi, "May I")
+      .replace(/\bShall you\b/gi, "Shall I")
+      .replace(/\bShould you\b/gi, "Should I")
+      .replace(/\bWould you\b/gi, "Would I")
+      .replace(/\byou\b/g, "I")
+      .replace(/\bYou\b/g, "I")
+      .replace(/\bme\b/g, "me")
+      .replace(/\byour\b/g, "my")
+      .replace(/\bYour\b/g, "My")
+      .replace(/\byourself\b/g, "myself")
+      .replace(/\bmyself\b/g, "yourself");
   }
 
-  function refreshChat() {
+  cleaned = cleaned
+    .replace(/\bI I\b/g, "I")
+    .replace(/\bme me\b/g, "me")
+    .replace(/\byou you\b/g, "you");
+
+  sendMessage(cleaned);
+}
+function refreshChat() {
     const chatbox = document.getElementById("chatbox");
     chatbox.innerHTML = `
       <div class="message bot">
