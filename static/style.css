@@ -100,13 +100,14 @@ body {
   clear: both;
   font-size: 0.95rem;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  
 }
 
 .clickable {
   cursor: pointer;
 }
 .clickable:hover {
-  color: #eb0707;
+  color: #4f07eb;
 }
 
 
