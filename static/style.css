@@ -104,8 +104,6 @@ body {
 
 .clickable {
   cursor: pointer;
-  color: #0055ff;
-  text-decoration: underline;
 }
 .clickable:hover {
   color: #eb0707;

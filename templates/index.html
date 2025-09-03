@@ -257,19 +257,20 @@ function handleFollowUp(text) {
     
     cleaned = cleaned
       .replace(/\bCan I help you\b/gi, "Can you help me")
+      .replace(/\bCan I show you\b/gi, "Can you show me")
       .replace(/\bMay I share you\b/gi, "May you share me")
+      .replace(/\bMay I help you\b/gi, "May you help me")
       .replace(/\bwould like to help you\b/gi, "would you like to help me")
-      .replace(/\bwill like to help you\b/gi, "will you like to help me");
+      .replace(/\bwill like to help you\b/gi, "will you like to help me")
+      .replace(/\bWhat signs tell you\b/gi, "what signs tell me")
 
     cleaned = cleaned
       .replace(/\bI\b/g, "you")
-      .replace(/\byou\b/g, "I")
       .replace(/\bmy\b/g, "your")
       .replace(/\bMy\b/g, "Your")
-      .replace(/\byou\b/g, "me")
       .replace(/\byour\b/g, "my")
-      .replace(/\bYou\b/g, "me")
       .replace(/\bYour\b/g, "My")
+      .replace(/\bwe\b/g, "we")
       .replace(/\byourself\b/g, "myself")
       .replace(/\bmyself\b/g, "yourself")
       .replace(/\byou're\b/g, "I'am")
@@ -283,21 +284,20 @@ function handleFollowUp(text) {
       .replace(/\bShall you\b/gi, "Shall I")
       .replace(/\bshould you\b/gi, "should I")
       .replace(/\bWould you\b/gi, "Would I")
+      .replace(/\bI\b/g, "you")
       .replace(/\byou\b/g, "I")
       .replace(/\bYou\b/g, "I")
       .replace(/\bme\b/g, "me")
       .replace(/\byour\b/g, "my")
       .replace(/\bYour\b/g, "My")
+      .replace(/\bwe\b/g, "we")
       .replace(/\byourself\b/g, "myself")
       .replace(/\bmyself\b/g, "yourself")
       .replace(/\byou're\b/g, "I'am")
       .replace(/\byou've\b/g, "I've");
+            
   }
-  cleaned = cleaned
-    .replace(/\bI I\b/g, "I")
-    .replace(/\bme me\b/g, "me")
-    .replace(/\byou you\b/g, "you");
-
+  
   sendMessage(cleaned);
 }
 
