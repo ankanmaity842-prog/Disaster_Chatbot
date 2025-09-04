@@ -1,0 +1,5 @@
+flask
+google-generativeai
+python-dotenv
+langdetect
+googletrans==4.0.0-rc1
