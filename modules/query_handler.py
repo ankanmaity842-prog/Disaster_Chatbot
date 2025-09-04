@@ -24,6 +24,7 @@ def handle_query(user_input, user_lang):
         f"Show respone in one to 3 lines for definition,first aid,kit,regions,global data,place,time like questions.Exclude bullet points for specific question like this .\n"
         f"Respond in 5 to 7 short bullet points as required .Exclude asterics. Use simple, student-friendly language.\n"
         f"Most important point on the first rest others.\n"
+        f"Show response only for the disaster related question including earthquake,flood,fir ,cyclone .\n"
         f"Be accurate and specific. Avoid general advice.\n"
         f"Show each points on the next line to previous point.\n"
         f"Respond briefly and precisely. Focus only on what the student needs to know.\n"
