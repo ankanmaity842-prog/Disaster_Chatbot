@@ -240,12 +240,19 @@ function handleFollowUp(text) {
   
   const offerPatterns = [
     
-    /\b(Can|May|Shall|Should|Would|Will)\s+I\s+(share|give|show|help|offer|send|explain|make|like)\s+you\b/i,
+    /\b(Can|May|Shall|Should|Would|Will|what|sign)\s+I\s+(share|give|guide|show|help|offer|should|tell|explain|make|like)\s+you\b/i,
     
     /\bCan I help you\b/i,
+    /\bcan I show you\b/i,
     /\bcan I share you\b/i,
+    /\bcan I guide you\b/i,
+     /\bMay I help you\b/i,
+      /\bMay share you\b/i,
     /\bwould like to help you\b/i,
     /\bwill like to help you\b/i,
+     /\bwhat signs tell you\b/i,
+     /\bwhat signs tell you\b/i,
+     /\bwhat should you do if you're\b/i,
     
     /\bLet me\b/i,
     /\bI have\b.*\byou\b/i
@@ -258,11 +265,13 @@ function handleFollowUp(text) {
     cleaned = cleaned
       .replace(/\bCan I help you\b/gi, "Can you help me")
       .replace(/\bCan I show you\b/gi, "Can you show me")
+      .replace(/\bCan I guide you\b/gi, "Can you guide me")
       .replace(/\bMay I share you\b/gi, "May you share me")
       .replace(/\bMay I help you\b/gi, "May you help me")
       .replace(/\bwould like to help you\b/gi, "would you like to help me")
       .replace(/\bwill like to help you\b/gi, "will you like to help me")
       .replace(/\bWhat signs tell you\b/gi, "what signs tell me")
+      .replace(/\bWhat should you do if you're\b/gi, "what should I do if I'am")
 
     cleaned = cleaned
       .replace(/\bI\b/g, "you")
@@ -274,7 +283,10 @@ function handleFollowUp(text) {
       .replace(/\byourself\b/g, "myself")
       .replace(/\bmyself\b/g, "yourself")
       .replace(/\byou're\b/g, "I'am")
-      .replace(/\byou've\b/g, "I've");
+      .replace(/\byou've\b/g, "I've")
+      .replace(/\byou're\b/g, "I'am")
+      .replace(/\byou'll\b/g, "I'll");
+      
       
   } else {
     

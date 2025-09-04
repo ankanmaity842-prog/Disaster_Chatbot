@@ -1,4 +1,4 @@
-# earthquake_queries.py
+
 
 earthquake_queries = [
     "What is an earthquake and how does it occur?",

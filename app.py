@@ -3,18 +3,25 @@ from modules.query_handler import handle_query
 import json, os, random
 from functools import lru_cache
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
-dq_path = os.path.join(app.static_folder, 'disaster_queries.json')
-with open(dq_path, 'r', encoding='utf-8') as f:
-    dq_data = json.load(f)
+app = Flask(__name__, static_folder="static", template_folder="templates")
+
+static_folder = app.static_folder or "static"
+dq_path = os.path.join(static_folder, "disaster_queries.json")
+
+dq_data = {}
+if os.path.exists(dq_path):
+    with open(dq_path, "r", encoding="utf-8") as f:
+        dq_data = json.load(f)
 
 disaster_queries = dq_data.get("disaster_queries", {})
 keyword_index = {}
+
 for dtype, data in disaster_queries.items():
     followups = data.get("followups", {}).get("keyword", [])
     for block in followups:
         for kw in block.get("keywords", []):
             keyword_index.setdefault(kw.lower(), []).extend(block.get("messages", []))
+
 intro_phrases = [
     "Great! Let’s take the next step together.",
     "I’m here with you. Want to keep going?",
@@ -60,8 +67,9 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    user_input = request.json.get("message", "").strip()
-    user_lang = request.json.get("language", "en")
+    data = request.get_json(silent=True) or {}
+    user_input = data.get("message", "").strip()
+    user_lang = data.get("language", "en")
 
     if not user_input:
         return jsonify({"response": "Please enter a message.", "followup": None})
@@ -92,6 +100,5 @@ def chat():
         "response": response,
         "followup": followup
     })
-
 if __name__ == "__main__":
     app.run(debug=True)

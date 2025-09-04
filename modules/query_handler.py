@@ -1,15 +1,16 @@
 from modules.language_support import translate_input, translate_output
 from modules.context_manager import get_context
 from modules.student_queries import enrich_student_query
-import google.generativeai as genai
+from google.generativeai.client import configure
+from google.generativeai.generative_models import GenerativeModel
 from modules.language_support import detect_language, normalize_mixed_input
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-genai.configure(api_key="AIzaSyB-8oD9GZ1Gh88YnwVdkkmqlLn7T9K7xhw")
+configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = GenerativeModel(model_name="gemini-2.5-flash")
 
-model = genai.GenerativeModel("gemini-2.5-flash")
 
 def handle_query(user_input, user_lang):
     mixed_input = normalize_mixed_input(user_input)
